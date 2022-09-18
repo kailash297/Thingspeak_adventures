@@ -1,0 +1,45 @@
+This post explains how Raspberry Pi4 can be mimicked as both the Sensor and IoT gateway and send across tehe CPU Temperature as one of the sensor values to Thingspeak so that the values can be plotted and analysed using inbuilt Matlab engine.
+
+This section explains the detailed steps:
+1. Open an account with Thingspeak, and depending on your needs, choose the right account. In my case, i opted for Hobby account which is for personal/non-commercial purpose and gives 4 channel to publish.
+
+2. Once the account is verified, login into Thingspeak and create a new channel.
+
+3. Since we are going to track only CPU temperature of the Raspberry Pi4, we will use only 1 field of the 8 offered fields. Name the field as 'Temperature' and tick the check box.
+
+4. You can make the channel public or private, depending on your needs.
+
+5. Go to 'API Keys' Tab. Make a note of both 'Write API Key' as welll as 'Read API Key' so that it can be used for writing/reading data from the published channel. 
+
+6. Since we are using Python in Raspberry Pi, certain pre-requistes needs to be installed.
+sudo pip install thingspeak
+
+7. Open any Python editor. I used Mu editor. You can use the below lines and adjust accordingly for your needs. Once this program is executed, for every 1 minute, this program will upload the CPU Temperature in C to the Thingspeak channel.
+
+import requests, sched, time
+
+# Create a scheduler to run every n seconds
+s = sched.scheduler(time.time, time.sleep)
+interval = 60
+
+# Definition to read sensor data and send it to ThingSpeak
+def read_and_send(sc):
+    # Determine CPU Temperature and set the query string
+    temp = int(open('/sys/class/thermal/thermal_zone0/temp').read()) / 1e3 # Get Raspberry Pi CPU temp
+    queries = {"api_key": "YOUR_Write_API_Key)",
+               "field1": temp}
+    # Send the request to ThingSpeak
+    r = requests.get('https://api.thingspeak.com/update', params=queries)
+    # Verify that ThingSpeak received our data
+    if r.status_code == requests.codes.ok:
+        print("Data Received!")
+    else:
+        print("Error Code: " + str(r.status_code))
+    # Re-add this definition to run again in n seconds
+    s.enter(interval, 1, read_and_send, (sc,))
+
+# Add our read_and_send task to the scheduler and run it.
+s.enter(interval, 1, read_and_send, (s,))
+s.run()
+
+8. Once 
